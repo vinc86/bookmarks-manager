@@ -52,7 +52,10 @@ exports.addBookmark = async (req,res)=>{
                 videoUrl
             })
             .save()
-            .then(bookmark => res.json(bookmark))
+            .then(bookmark =>{ 
+                console.log(bookmark)
+                res.json(bookmark)
+            })
         } catch (err) {
             console.log(err)
         }
@@ -68,11 +71,30 @@ exports.deleteBookmark = async(req,res)=>{
 exports.addLike = async(req,res) => {
     const userId = req.user;
     const getUserName = await Users.findById(userId).then(user => user.username)
-    const bookmarkId = req.params.id;
-
-
-
-    const toUpdate = await Bookmarks.findbyId(bookmarkId)
-    Object.assign(toUpdate,{likes:[...getUsername]})
-    res.json(toUpdate)
+    const bookmarkId = req.body._id;
+    const currentBookmark = await Bookmarks.findById(bookmarkId)
+    const isLiked = await currentBookmark.likes.find( like => like.username === getUserName)
+    if(!isLiked){
+        const toUpdate = await Bookmarks.findByIdAndUpdate(bookmarkId,{
+            $push:{
+                likes:[
+                    {
+                        username: getUserName
+                    }
+                ]
+            }
+        })
+        res.status(200).json({liked: true, toUpdate})
+        console.log(toUpdate)
+    } else {
+        const removeLike = await currentBookmark.likes.filter(like => like.username !== getUserName)
+        const toUpdate = await Bookmarks.findByIdAndUpdate(bookmarkId,{
+            $set:{
+                likes: removeLike
+            }
+        })
+        res.status(200).json({liked: false, toUpdate})
+        console.log(toUpdate)
+    }
+   
 }
